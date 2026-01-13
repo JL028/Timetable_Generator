@@ -1,4 +1,6 @@
 <!--Timetable_v12.html-->
+<!--Responsive_Design-->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -245,6 +247,50 @@
         .grid-cell.has-text { z-index: 10; }
         .grid-cell[data-minute="30"] { border-bottom: 1px solid var(--border); }
         .grid-cell:hover { filter: brightness(0.95); }
+
+        /* --- MOBILE RESPONSIVE STYLES --- */
+        @media (max-width: 900px) {
+            /* 1. Reset the body to allow scrolling the whole page */
+            body {
+                height: auto;
+                overflow: auto;
+                display: block;
+                padding: 10px;
+            }
+
+            /* 2. Stack the layout vertically (Column instead of Row) */
+            .app-container {
+                flex-direction: column;
+                height: auto;
+                overflow: visible;
+            }
+
+            /* 3. Make sidebar full width and auto-height */
+            .sidebar {
+                width: 100%;
+                height: auto;
+                margin-bottom: 20px;
+                /* box-sizing is already set globally, but good to ensure */
+                box-sizing: border-box; 
+            }
+
+            /* 4. Fix the planner area to handle small screens */
+            .planner-wrapper {
+                width: 100%;
+                /* This enables the horizontal scroll for the grid! */
+                overflow-x: auto; 
+                /* Give it a fixed height so you can still scroll time slots vertically */
+                height: 70vh; 
+                flex: none;
+            }
+        
+            /* 5. Ensure the grid stays wide enough to be readable */
+            /* This forces the scrollbar to appear instead of squishing the text */
+            .grid-header, .grid-scroll-area {
+                min-width: 700px; 
+            }
+        }
+        
     </style>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
