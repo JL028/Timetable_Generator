@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Time Blocker v12</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            height: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        h2 { margin: 0 0 5px 0; font-size: 1.2rem; }
+        .section-title { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px; letter-spacing: 0.5px; }
+
+        .control-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .row { display: flex; gap: 10px; }
+        .col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        
+        label { font-size: 0.85rem; font-weight: 600; color: #64748b; }
+        
+        input[type="number"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            width: 100%;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 40px;
+        }
+
+        .color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+        .color-swatch {
+            width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: transform 0.2s;
+        }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.active { border-color: #000; box-shadow: 0 0 0 2px white inset; }
+
+        .tools { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
+        
+        .tool-btn {
+            padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 6px; cursor: pointer; display: flex; align-items: flex-start; 
+            gap: 10px; transition: background 0.2s; position: relative;
+        }
+        .tool-btn:hover { background: #f1f5f9; }
+        .tool-btn.active {
+            border-color: var(--primary); background: #eff6ff; color: var(--primary); font-weight: 600;
+        }
+        
+        .tool-dot { 
+            width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; 
+            margin-top: 5px; 
+            cursor: pointer; 
+            border: 1px solid rgba(0,0,0,0.1);
+            position: relative; /* Anchor for popup */
+        }
+        .tool-dot:hover { transform: scale(1.2); }
+        
+        /* NEW: Popup Color Plate Styling */
+        .tool-color-popup {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 0;
+            background: white;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 8px;
+            border-radius: 8px;
+            width: 160px;
+            z-index: 100;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .tool-color-popup.show { display: flex; }
+        .popup-swatch {
+            width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .popup-swatch:hover { transform: scale(1.1); }
+
+        .tool-text { 
+            flex: 1; 
+            overflow: hidden; 
+            font-size: 0.9rem; 
+            white-space: pre-wrap; 
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.2s;
+        }
+        .tool-text[contenteditable="true"]:hover, 
+        .tool-text[contenteditable="true"]:focus {
+            border-bottom-color: #94a3b8;
+            cursor: text;
+        }
+
+        .delete-tool {
+            width: 20px; height: 20px; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            color: #cbd5e1; font-weight: bold; font-size: 1rem;
+            margin-left: auto; cursor: pointer;
+            margin-top: 1px;
+        }
+        .delete-tool:hover { background: #fee2e2; color: var(--danger); }
+
+        .action-btn {
+            padding: 10px; background: var(--primary); color: white;
+            border: none; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;
+        }
+        .action-btn.secondary { background: white; color: var(--text); border: 1px solid var(--border); }
+        .action-btn.small { padding: 6px; font-size: 0.85rem; }
+
+        /* --- LAYOUT STRUCTURE --- */
+        .planner-wrapper {
+            flex: 1;
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; 
+            padding: 20px;
+            padding-bottom: 0; 
+        }
+
+        .grid-header {
+            display: grid;
+            grid-template-columns: 60px repeat(7, 1fr);
+            border-top: 1px solid var(--border);
+            border-left: 1px solid var(--border);
+            min-width: 800px;
+            background: #f8fafc;
+            flex-shrink: 0; 
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-cell {
+            padding: 12px 5px;
+            text-align: center;
+            font-weight: 700;
+            border-right: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .grid-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden; 
+            min-width: 800px;
+            position: relative;
+        }
+
+        .grid-body {
+            display: grid;
+            grid-template-columns: 60px repeat(7, 1fr);
+            border-left: 1px solid var(--border);
+        }
+
+        .time-label {
+            min-height: 20px; 
+            height: auto;
+            box-sizing: border-box;
+            border-right: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .grid-cell {
+            min-height: 20px;
+            height: auto;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid #f1f5f9; 
+            cursor: pointer;
+            font-size: 0.75rem; 
+            display: flex; 
+            align-items: flex-start; 
+            justify-content: flex-start; 
+            padding: 2px 4px; 
+            white-space: pre-wrap; 
+            word-break: break-word; 
+            line-height: 1.2;    
+            color: #334155; 
+            font-weight: 600;
+            position: relative;
+            z-index: 1; 
+        }
+
+        .grid-cell.has-text { z-index: 10; }
+        .grid-cell[data-minute="30"] { border-bottom: 1px solid var(--border); }
+        .grid-cell:hover { filter: brightness(0.95); }
+    </style>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="sidebar">
+        <h2>Planner v12</h2>
+        
+        <div class="section-title">Grid Settings</div>
+        <div class="control-group">
+            <div class="row">
+                <div class="col">
+                    <label>Start</label>
+                    <input type="number" id="startHourInput" value="6" min="0" max="23">
+                </div>
+                <div class="col">
+                    <label>End</label>
+                    <input type="number" id="endHourInput" value="23" min="1" max="24">
+                </div>
+            </div>
+            <button class="action-btn small secondary" id="updateGridBtn">Update Range</button>
+        </div>
+
+        <hr style="border:0; border-top:1px solid #e2e8f0; width:100%; margin: 5px 0;">
+
+        <div class="section-title">Tools</div>
+        <div class="control-group">
+            <label>Name (Press Enter for new line)</label>
+            <textarea id="categoryName" placeholder="e.g. Deep Work&#10;Room 101" rows="2"></textarea>
+            <div class="color-picker" id="colorPicker"></div>
+            <button class="action-btn secondary small" id="addToolBtn">+ Add Category</button>
+        </div>
+
+        <div class="tools" id="toolList">
+            <div class="tool-btn active" data-color="#ffffff" data-tool-id="eraser" id="eraserTool">
+                <div class="tool-dot" style="background: #ffffff; border:1px solid #ccc;"></div>
+                <span class="tool-text">Eraser</span>
+            </div>
+        </div>
+
+        <div style="margin-top:auto">
+            <button class="action-btn" id="downloadBtn">Download Full Image</button>
+        </div>
+    </div>
+
+    <div class="planner-wrapper" id="captureTarget">
+        
+        <div class="grid-header" id="gridHeader">
+            <div class="header-cell">Time</div>
+        </div>
+
+        <div class="grid-scroll-area">
+            <div class="grid-body" id="gridBody">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const colors = [
+        '#fee2e2', '#fce7f3', '#e0e7ff', '#dcfce7', '#fef3c7', 
+        '#ffedd5', '#f3f4f6', '#cbd5e1', '#fca5a5', '#93c5fd'
+    ];
+
+    let startHour = 6;
+    let endHour = 23;
+    
+    let activeToolId = 'eraser'; 
+    let activeColor = '#ffffff';
+    let isMouseDown = false;
+    let scheduleData = {}; 
+
+    const gridHeader = document.getElementById('gridHeader');
+    const gridBody = document.getElementById('gridBody');
+    const toolList = document.getElementById('toolList');
+    const colorPicker = document.getElementById('colorPicker');
+    const categoryInput = document.getElementById('categoryName');
+    
+    function init() {
+        // Init Main Color Picker
+        let selectedColor = colors[0];
+        colors.forEach((c, index) => {
+            const swatch = document.createElement('div');
+            swatch.className = `color-swatch ${index === 0 ? 'active' : ''}`;
+            swatch.style.background = c;
+            swatch.onclick = () => {
+                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+                swatch.classList.add('active');
+                selectedColor = c;
+            };
+            colorPicker.appendChild(swatch);
+        });
+
+        // Add Category Logic
+        document.getElementById('addToolBtn').onclick = () => {
+            const name = categoryInput.value; 
+            if(!name) return;
+            const chosenColor = document.querySelector('.color-swatch.active').style.background;
+            const uniqueId = 'cat_' + Date.now();
+            
+            createToolButton(uniqueId, name, chosenColor);
+            
+            const newBtn = toolList.lastElementChild;
+            selectTool(newBtn, uniqueId, chosenColor);
+            
+            categoryInput.value = ''; 
+        };
+
+        // Update Grid Range Logic
+        document.getElementById('updateGridBtn').onclick = () => {
+            const s = parseInt(document.getElementById('startHourInput').value);
+            const e = parseInt(document.getElementById('endHourInput').value);
+            if(s < e) {
+                startHour = s;
+                endHour = e;
+                renderGrid(); 
+            } else {
+                alert("Start hour must be smaller than End hour");
+            }
+        };
+
+        // Header Init
+        days.forEach(day => {
+            const d = document.createElement('div');
+            d.className = 'header-cell';
+            d.innerText = day;
+            gridHeader.appendChild(d);
+        });
+
+        renderGrid();
+        
+        document.body.addEventListener('mouseup', () => isMouseDown = false);
+        const eraser = document.getElementById('eraserTool');
+        eraser.onclick = () => selectTool(eraser, 'eraser', '#ffffff');
+
+        document.getElementById('downloadBtn').onclick = () => {
+            const original = document.getElementById('captureTarget');
+            const clone = original.cloneNode(true);
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.top = '-9999px';
+            container.style.left = '0';
+            container.style.width = '1200px'; 
+            clone.style.height = 'auto';
+            clone.style.overflow = 'visible';
+            clone.style.boxShadow = 'none';
+            const scrollArea = clone.querySelector('.grid-scroll-area');
+            scrollArea.style.overflow = 'visible';
+            scrollArea.style.height = 'auto';
+            container.appendChild(clone);
+            document.body.appendChild(container);
+            html2canvas(clone).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'weekly-schedule.png';
+                link.href = canvas.toDataURL();
+                link.click();
+                document.body.removeChild(container);
+            });
+        };
+        
+        // Close popups when clicking anywhere else
+        document.addEventListener('click', (e) => {
+            if(!e.target.closest('.tool-dot') && !e.target.closest('.tool-color-popup')) {
+                document.querySelectorAll('.tool-color-popup').forEach(p => p.classList.remove('show'));
+            }
+        });
+    }
+
+    function createToolButton(id, name, color) {
+        const btn = document.createElement('div');
+        btn.className = 'tool-btn';
+        btn.dataset.toolId = id;
+        btn.dataset.color = color; 
+
+        // Generate Palette HTML inside button
+        let paletteHtml = '<div class="tool-color-popup">';
+        colors.forEach(c => {
+            paletteHtml += `<div class="popup-swatch" style="background:${c}" data-c="${c}"></div>`;
+        });
+        paletteHtml += '</div>';
+
+        btn.innerHTML = `
+            <div class="tool-dot" title="Click to pick color" style="background:${color}">
+                ${paletteHtml}
+            </div>
+            <span class="tool-text" contenteditable="true" spellcheck="false">${name}</span>
+            <div class="delete-tool">×</div>
+        `;
+
+        const dot = btn.querySelector('.tool-dot');
+        const popup = btn.querySelector('.tool-color-popup');
+        const textSpan = btn.querySelector('.tool-text');
+        const deleteBtn = btn.querySelector('.delete-tool');
+
+        // 1. Tool Selection (Click Background)
+        btn.addEventListener('click', (e) => {
+            // If clicking popup or dot, don't just select tool, handle color logic
+            if(e.target.closest('.tool-dot') || e.target === deleteBtn || e.target === textSpan) return;
+            selectTool(btn, id, btn.dataset.color);
+        });
+
+        // 2. Open Color Popup (Click Dot)
+        dot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Close others
+            document.querySelectorAll('.tool-color-popup').forEach(p => {
+                if(p !== popup) p.classList.remove('show');
+            });
+            popup.classList.toggle('show');
+        });
+
+        // 3. Choose Color from Popup
+        popup.querySelectorAll('.popup-swatch').forEach(swatch => {
+            swatch.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const newColor = swatch.getAttribute('data-c');
+                
+                // Update UI
+                dot.style.background = newColor;
+                btn.dataset.color = newColor;
+                popup.classList.remove('show'); // Close popup
+
+                // Update active state if this tool is currently selected
+                if (activeToolId === id) {
+                    activeColor = newColor;
+                    btn.classList.add('active'); 
+                }
+
+                // Update Data & Grid
+                Object.keys(scheduleData).forEach(key => {
+                    if(scheduleData[key].toolId === id) {
+                        scheduleData[key].color = newColor;
+                    }
+                });
+                renderGrid();
+            });
+        });
+
+        // 4. Delete Logic
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            btn.remove();
+            Object.keys(scheduleData).forEach(key => {
+                if(scheduleData[key].toolId === id) delete scheduleData[key];
+            });
+            updateLabels();
+            if(btn.classList.contains('active')) document.getElementById('eraserTool').click();
+        });
+
+        // 5. Edit Name Logic
+        textSpan.addEventListener('focus', () => {
+            selectTool(btn, id, btn.dataset.color);
+        });
+
+        textSpan.addEventListener('input', () => {
+            const newName = textSpan.innerText;
+            Object.keys(scheduleData).forEach(key => {
+                if(scheduleData[key].toolId === id) {
+                    scheduleData[key].task = newName;
+                }
+            });
+            updateLabels(); 
+        });
+
+        toolList.appendChild(btn);
+    }
+
+    function selectTool(el, id, color) {
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        activeColor = color;
+        activeToolId = id;
+    }
+
+    function getSlotId(dayName, hour, minute) {
+        return `${dayName}-${hour}:${minute}`;
+    }
+
+    function renderGrid() {
+        gridBody.innerHTML = ''; 
+
+        for (let h = startHour; h < endHour; h++) {
+            ['00', '30'].forEach(min => {
+                const label = document.createElement('div');
+                label.className = 'time-label';
+                if (min === '00') label.innerText = `${h}:00`; 
+                if(min === '30') label.style.borderBottom = '1px solid #e2e8f0';
+                gridBody.appendChild(label);
+
+                for (let d = 0; d < 7; d++) {
+                    const dayName = days[d];
+                    const slotId = getSlotId(dayName, h, min);
+
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.dataset.minute = min;
+                    cell.dataset.slotId = slotId;
+
+                    if (scheduleData[slotId]) {
+                        cell.style.background = scheduleData[slotId].color;
+                        cell.dataset.task = scheduleData[slotId].task;
+                    }
+
+                    cell.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        isMouseDown = true;
+                        paintCell(cell);
+                    });
+                    cell.addEventListener('mouseenter', () => {
+                        if (isMouseDown) paintCell(cell);
+                    });
+                    
+                    gridBody.appendChild(cell);
+                }
+            });
+        }
+        updateLabels();
+    }
+
+    function paintCell(cell) {
+        if (activeToolId === 'eraser') {
+            cell.style.background = '#ffffff';
+            cell.dataset.task = '';
+            delete scheduleData[cell.dataset.slotId];
+        } else {
+            const toolBtn = document.querySelector(`.tool-btn[data-tool-id="${activeToolId}"]`);
+            if (!toolBtn) return;
+            
+            const currentName = toolBtn.querySelector('.tool-text').innerText;
+            const currentColor = toolBtn.dataset.color; 
+            
+            cell.style.background = currentColor;
+            cell.dataset.task = currentName;
+            
+            scheduleData[cell.dataset.slotId] = {
+                color: currentColor,
+                task: currentName,
+                toolId: activeToolId
+            };
+        }
+        updateLabels();
+    }
+
+    function updateLabels() {
+        const cells = document.querySelectorAll('.grid-cell');
+        for (let i = 0; i < cells.length; i++) {
+            const currentCell = cells[i];
+            const slotId = currentCell.dataset.slotId;
+            const currentTask = scheduleData[slotId] ? scheduleData[slotId].task : '';
+
+            currentCell.innerText = '';
+            currentCell.classList.remove('has-text');
+            currentCell.title = '';
+
+            if (currentTask === '') continue;
+
+            let isTop = true;
+            if (i >= 7) { 
+                const cellAbove = cells[i - 7];
+                const taskAbove = scheduleData[cellAbove.dataset.slotId] ? scheduleData[cellAbove.dataset.slotId].task : '';
+                if (taskAbove === currentTask) {
+                    isTop = false;
+                }
+            }
+
+            if (isTop) {
+                currentCell.innerText = currentTask; 
+                currentCell.title = currentTask;
+                currentCell.classList.add('has-text'); 
+            }
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>
